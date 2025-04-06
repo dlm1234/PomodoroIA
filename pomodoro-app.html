@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro IA</title>
+    <style>
+        :root {
+            --primary: #e74c3c;
+            --secondary: #3498db;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 30px;
+        }
+        
+        .timer-display {
+            font-size: 5rem;
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+            color: var(--dark);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--primary);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #c0392b;
+        }
+        
+        button#reset {
+            background-color: var(--dark);
+        }
+        
+        button#reset:hover {
+            background-color: #1a252f;
+        }
+        
+        .settings {
+            margin-top: 30px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        
+        .settings h3 {
+            margin-top: 0;
+            color: var(--dark);
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .setting-item label {
+            font-weight: bold;
+        }
+        
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        
+        .mode-indicator {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .work-mode {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--primary);
+        }
+        
+        .break-mode {
+            background-color: rgba(52, 152, 219, 0.1);
+            color: var(--secondary);
+        }
+        
+        .break-suggestions {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: rgba(52, 152, 219, 0.1);
+            display: none;
+        }
+        
+        .break-suggestions h3 {
+            margin-top: 0;
+            color: var(--secondary);
+        }
+        
+        .suggestion-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .suggestion-list li {
+            padding: 8px 0;
+            border-bottom: 1px dashed #ccc;
+        }
+        
+        .suggestion-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .cycle-counter {
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: 10px;
+            color: #7f8c8d;
+        }
+        
+        @media (max-width: 480px) {
+            .timer-display {
+                font-size: 4rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pomodoro IA</h1>
+        
+        <div class="mode-indicator work-mode" id="modeIndicator">
+            Modo Trabajo
+        </div>
+        
+        <div class="timer-display" id="timer">
+            25:00
+        </div>
+        
+        <div class="controls">
+            <button id="start">Iniciar</button>
+            <button id="pause">Pausar</button>
+            <button id="reset">Reiniciar</button>
+        </div>
+        
+        <div class="cycle-counter" id="cycleCounter">
+            Ciclos completados: 0
+        </div>
+        
+        <div class="break-suggestions" id="breakSuggestions">
+            <h3>Recomendaciones para tu descanso:</h3>
+            <ul class="suggestion-list" id="suggestionList">
+                <!-- Las sugerencias se insertarán aquí mediante JavaScript -->
+            </ul>
+        </div>
+        
+        <div class="settings">
+            <h3>Configuración</h3>
+            <div class="setting-item">
+                <label for="workDuration">Duración trabajo (min):</label>
+                <input type="number" id="workDuration" min="1" max="60" value="25">
+            </div>
+            <div class="setting-item">
+                <label for="shortBreakDuration">Descanso corto (min):</label>
+                <input type="number" id="shortBreakDuration" min="1" max="30" value="5">
+            </div>
+            <div class="setting-item">
+                <label for="longBreakDuration">Descanso largo (min):</label>
+                <input type="number" id="longBreakDuration" min="1" max="60" value="15">
+            </div>
+            <div class="setting-item">
+                <label for="longBreakInterval">Ciclos para descanso largo:</label>
+                <input type="number" id="longBreakInterval" min="1" max="10" value="4">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos DOM
+        const timerDisplay = document.getElementById('timer');
+        const startButton = document.getElementById('start');
+        const pauseButton = document.getElementById('pause');
+        const resetButton = document.getElementById('reset');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const cycleCounter = document.getElementById('cycleCounter');
+        const breakSuggestions = document.getElementById('breakSuggestions');
+        const suggestionList = document.getElementById('suggestionList');
+        
+        // Configuración
+        const workDurationInput = document.getElementById('workDuration');
+        const shortBreakDurationInput = document.getElementById('shortBreakDuration');
+        const longBreakDurationInput = document.getElementById('longBreakDuration');
+        const longBreakIntervalInput = document.getElementById('longBreakInterval');
+        
+        // Variables del temporizador
+        let timer;
+        let timeLeft;
+        let isRunning = false;
+        let mode = 'work'; // 'work', 'shortBreak', 'longBreak'
+        let cyclesCompleted = 0;
+        
+        // Base de datos de recomendaciones para descansos
+        const breakActivities = {
+            physical: [
+                "Realiza 10 estiramientos de cuello y hombros",
+                "Camina durante 5 minutos",
+                "Haz 5 minutos de ejercicios de respiración profunda",
+                "Realiza 15 sentadillas rápidas",
+                "Sube y baja escaleras durante 3 minutos",
+                "Haz 10 flexiones de pared",
+                "Estira tu espalda y piernas por 3 minutos"
+            ],
+            mental: [
+                "Practica 5 minutos de meditación mindfulness",
+                "Escucha una canción relajante con los ojos cerrados",
+                "Dibuja cualquier cosa que venga a tu mente",
+                "Escribe 3 cosas por las que estás agradecido hoy",
+                "Haz un pequeño ejercicio de visualización positiva",
+                "Practica la técnica de respiración 4-7-8 por un minuto"
+            ],
+            refreshment: [
+                "Bebe un vaso de agua",
+                "Prepárate un té o bebida caliente",
+                "Come una fruta o un pequeño snack saludable",
+                "Lava tu cara con agua fría",
+                "Reorganiza brevemente tu espacio de trabajo"
+            ],
+            productive: [
+                "Organiza un pequeño sector de tu escritorio",
+                "Revisa rápidamente tus objetivos para el día",
+                "Haz una pequeña lista de tareas pendientes",
+                "Archiva documentos digitales que ya no necesites",
+                "Vacía tu bandeja de correo electrónico"
+            ]
+        };
+        
+        // Sistema de IA simple - Recomienda actividades basadas en patrones
+        class SimpleBreakRecommender {
+            constructor() {
+                this.userPreferences = {
+                    physical: 0.25,
+                    mental: 0.25,
+                    refreshment: 0.25,
+                    productive: 0.25
+                };
+                this.timeOfDay = this.getTimeOfDay();
+                this.lastSuggestions = [];
+            }
+            
+            getTimeOfDay() {
+                const hour = new Date().getHours();
+                if (hour < 12) return 'morning';
+                if (hour < 18) return 'afternoon';
+                return 'evening';
+            }
+            
+            updatePreferences(category) {
+                // Aumenta ligeramente la preferencia para la categoría utilizada
+                const incrementValue = 0.1;
+                const decrementValue = incrementValue / 3;
+                
+                // Aumenta la categoría seleccionada
+                this.userPreferences[category] += incrementValue;
+                
+                // Disminuye proporcionalmente las otras categorías
+                for (const key in this.userPreferences) {
+                    if (key !== category) {
+                        this.userPreferences[key] -= decrementValue;
+                        // Asegurarse de que no sea menor que 0
+                        if (this.userPreferences[key] < 0) this.userPreferences[key] = 0;
+                    }
+                }
+                
+                // Normaliza las preferencias para que sumen 1
+                const sum = Object.values(this.userPreferences).reduce((a, b) => a + b, 0);
+                for (const key in this.userPreferences) {
+                    this.userPreferences[key] /= sum;
+                }
+            }
+            
+            getRecommendations(breakDuration, isLongBreak) {
+                // Actualiza la hora del día
+                this.timeOfDay = this.getTimeOfDay();
+                
+                // Determina cuántas sugerencias dar basado en la duración del descanso
+                const numSuggestions = isLongBreak ? 3 : 2;
+                
+                // Ajusta preferencias basadas en la hora del día
+                const adjustedPreferences = {...this.userPreferences};
+                
+                // Por la mañana - más actividades físicas y productivas
+                if (this.timeOfDay === 'morning') {
+                    adjustedPreferences.physical *= 1.2;
+                    adjustedPreferences.productive *= 1.1;
+                }
+                // Por la tarde - equilibrado
+                else if (this.timeOfDay === 'afternoon') {
+                    adjustedPreferences.mental *= 1.1;
+                    adjustedPreferences.refreshment *= 1.1;
+                }
+                // Por la noche - más actividades mentales y de refresco, menos físicas
+                else {
+                    adjustedPreferences.mental *= 1.2;
+                    adjustedPreferences.physical *= 0.8;
+                }
+                
+                // Normaliza las preferencias ajustadas
+                const sum = Object.values(adjustedPreferences).reduce((a, b) => a + b, 0);
+                for (const key in adjustedPreferences) {
+                    adjustedPreferences[key] /= sum;
+                }
+                
+                // Crea una lista ponderada de todas las categorías
+                const weightedCategories = [];
+                for (const category in adjustedPreferences) {
+                    for (let i = 0; i < Math.floor(adjustedPreferences[category] * 100); i++) {
+                        weightedCategories.push(category);
+                    }
+                }
+                
+                const suggestions = [];
+                const usedCategories = new Set();
+                
+                // Asegura variedad seleccionando primero categorías diferentes
+                while (suggestions.length < numSuggestions && usedCategories.size < Object.keys(adjustedPreferences).length) {
+                    const randomIndex = Math.floor(Math.random() * weightedCategories.length);
+                    const category = weightedCategories[randomIndex];
+                    
+                    if (!usedCategories.has(category)) {
+                        const activities = breakActivities[category];
+                        const activityIndex = Math.floor(Math.random() * activities.length);
+                        const activity = activities[activityIndex];
+                        
+                        if (!this.lastSuggestions.includes(activity)) {
+                            suggestions.push({
+                                activity: activity,
+                                category: category
+                            });
+                            usedCategories.add(category);
+                            
+                            // Mantén un historial de las últimas sugerencias para evitar repeticiones
+                            this.lastSuggestions.push(activity);
+                            if (this.lastSuggestions.length > 10) {
+                                this.lastSuggestions.shift();
+                            }
+                        }
+                    }
+                }
+                
+                // Si no tenemos suficientes sugerencias, elige aleatoriamente de las categorías restantes
+                while (suggestions.length < numSuggestions) {
+                    const randomIndex = Math.floor(Math.random() * weightedCategories.length);
+                    const category = weightedCategories[randomIndex];
+                    
+                    const activities = breakActivities[category];
+                    const activityIndex = Math.floor(Math.random() * activities.length);
+                    const activity = activities[activityIndex];
+                    
+                    // Evita repeticiones
+                    if (!suggestions.some(s => s.activity === activity) && !this.lastSuggestions.includes(activity)) {
+                        suggestions.push({
+                            activity: activity,
+                            category: category
+                        });
+                        
+                        this.lastSuggestions.push(activity);
+                        if (this.lastSuggestions.length > 10) {
+                            this.lastSuggestions.shift();
+                        }
+                    }
+                }
+                
+                return suggestions;
+            }
+        }
+        
+        // Crear instancia del recomendador
+        const recommender = new SimpleBreakRecommender();
+        
+        // Inicializar temporizador
+        function updateTimerDisplay(minutes, seconds) {
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function startTimer() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                
+                updateTimerDisplay(minutes, seconds);
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    isRunning = false;
+                    playAlarm();
+                    
+                    if (mode === 'work') {
+                        cyclesCompleted++;
+                        cycleCounter.textContent = `Ciclos completados: ${cyclesCompleted}`;
+                        
+                        const longBreakInterval = parseInt(longBreakIntervalInput.value);
+                        
+                        if (cyclesCompleted % longBreakInterval === 0) {
+                            startLongBreak();
+                        } else {
+                            startShortBreak();
+                        }
+                    } else {
+                        startWork();
+                    }
+                }
+            }, 1000);
+        }
+        
+        function pauseTimer() {
+            if (!isRunning) return;
+            
+            clearInterval(timer);
+            isRunning = false;
+        }
+        
+        function resetTimer() {
+            pauseTimer();
+            startWork(false);
+        }
+        
+        function startWork(autostart = true) {
+            pauseTimer();
+            mode = 'work';
+            const workDuration = parseInt(workDurationInput.value);
+            timeLeft = workDuration * 60;
+            
+            updateTimerDisplay(workDuration, 0);
+            
+            modeIndicator.textContent = 'Modo Trabajo';
+            modeIndicator.className = 'mode-indicator work-mode';
+            
+            breakSuggestions.style.display = 'none';
+            
+            if (autostart) {
+                startTimer();
+            }
+        }
+        
+        function startShortBreak() {
+            pauseTimer();
+            mode = 'shortBreak';
+            const shortBreakDuration = parseInt(shortBreakDurationInput.value);
+            timeLeft = shortBreakDuration * 60;
+            
+            updateTimerDisplay(shortBreakDuration, 0);
+            
+            modeIndicator.textContent = 'Descanso Corto';
+            modeIndicator.className = 'mode-indicator break-mode';
+            
+            showBreakSuggestions(shortBreakDuration, false);
+            
+            startTimer();
+        }
+        
+        function startLongBreak() {
+            pauseTimer();
+            mode = 'longBreak';
+            const longBreakDuration = parseInt(longBreakDurationInput.value);
+            timeLeft = longBreakDuration * 60;
+            
+            updateTimerDisplay(longBreakDuration, 0);
+            
+            modeIndicator.textContent = 'Descanso Largo';
+            modeIndicator.className = 'mode-indicator break-mode';
+            
+            showBreakSuggestions(longBreakDuration, true);
+            
+            startTimer();
+        }
+        
+        function showBreakSuggestions(duration, isLongBreak) {
+            // Obtener recomendaciones basadas en IA
+            const recommendations = recommender.getRecommendations(duration, isLongBreak);
+            
+            // Limpiar sugerencias anteriores
+            suggestionList.innerHTML = '';
+            
+            // Agregar nuevas sugerencias
+            recommendations.forEach(rec => {
+                const li = document.createElement('li');
+                li.textContent = rec.activity;
+                li.dataset.category = rec.category;
+                
+                // Agregar evento click para que el sistema aprenda de las preferencias del usuario
+                li.addEventListener('click', function() {
+                    // Actualizamos las preferencias del usuario basado en su selección
+                    recommender.updatePreferences(rec.category);
+                    
+                    // Indicar visualmente que se ha seleccionado
+                    this.style.fontWeight = 'bold';
+                    this.style.color = '#3498db';
+                });
+                
+                suggestionList.appendChild(li);
+            });
+            
+            breakSuggestions.style.display = 'block';
+        }
+        
+        function playAlarm() {
+            // Implementación simple de un sonido de alarma
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 800;
+                gainNode.gain.value = 0.5;
+                
+                oscillator.start();
+                
+                // Decrecer el volumen gradualmente
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 1);
+                
+                // Detener después de 1 segundo
+                setTimeout(() => {
+                    oscillator.stop();
+                }, 1000);
+            } catch (e) {
+                console.log('No se pudo reproducir la alarma:', e);
+            }
+        }
+        
+        // Inicializar la aplicación
+        function init() {
+            startWork(false);
+            
+            // Event listeners
+            startButton.addEventListener('click', startTimer);
+            pauseButton.addEventListener('click', pauseTimer);
+            resetButton.addEventListener('click', resetTimer);
+            
+            // Event listeners para los campos de configuración
+            workDurationInput.addEventListener('change', () => {
+                if (mode === 'work' && !isRunning) {
+                    const workDuration = parseInt(workDurationInput.value);
+                    timeLeft = workDuration * 60;
+                    updateTimerDisplay(workDuration, 0);
+                }
+            });
+            
+            shortBreakDurationInput.addEventListener('change', () => {
+                if (mode === 'shortBreak' && !isRunning) {
+                    const shortBreakDuration = parseInt(shortBreakDurationInput.value);
+                    timeLeft = shortBreakDuration * 60;
+                    updateTimerDisplay(shortBreakDuration, 0);
+                }
+            });
+            
+            longBreakDurationInput.addEventListener('change', () => {
+                if (mode === 'longBreak' && !isRunning) {
+                    const longBreakDuration = parseInt(longBreakDurationInput.value);
+                    timeLeft = longBreakDuration * 60;
+                    updateTimerDisplay(longBreakDuration, 0);
+                }
+            });
+        }
+        
+        // Iniciar la aplicación cuando se carga el documento
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
